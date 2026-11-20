@@ -13,8 +13,13 @@ def mac(pattern, filt):
     return total
 
 
+def is_tie(a, b):
+    # 부동소수점 오차를 고려한 동점 판단 (모드 1, 2 공통)
+    return abs(a - b) < EPSILON
+
+
 def judge(cross_score, x_score):
-    if abs(cross_score - x_score) < EPSILON:
+    if is_tie(cross_score, x_score):
         return "UNDECIDED"
     elif cross_score > x_score:
         return "Cross"
@@ -29,6 +34,11 @@ def normalize_label(label):
     elif label == "x":
         return "X"
     return label
+
+
+def normalize_filters(size_filters):
+    # 필터 키도 라벨과 같은 규칙으로 정규화: 'cross', 'Cross', '+', 'X', 'x' 등 → 'Cross' / 'X'
+    return {normalize_label(k): v for k, v in size_filters.items()}
 
 
 def read_matrix(name, n=3):
@@ -61,7 +71,7 @@ def mode1():
     score_a = mac(pattern, filter_a)
     score_b = mac(pattern, filter_b)
 
-    if abs(score_a - score_b) < EPSILON:
+    if is_tie(score_a, score_b):
         result = "판정 불가 (UNDECIDED)"
     elif score_a > score_b:
         result = "A"
@@ -85,9 +95,9 @@ def mode2(path="data.json"):
         total += 1
         try:
             n = int(key.split("_")[1])          # "size_5_1" → 5
-            size_filters = filters[f"size_{n}"]
-            cross_filter = size_filters["cross"]
-            x_filter = size_filters["x"]
+            size_filters = normalize_filters(filters[f"size_{n}"])
+            cross_filter = size_filters["Cross"]
+            x_filter = size_filters["X"]
             pattern = case["input"]
 
             if len(pattern) != n or any(len(row) != n for row in pattern):
@@ -122,7 +132,7 @@ def perf_table(filters):
     cross3 = [[0, 1, 0], [1, 1, 1], [0, 1, 0]]
     cases = [(3, cross3, cross3)]
     for n in (5, 13, 25):
-        f = filters[f"size_{n}"]["cross"]
+        f = normalize_filters(filters[f"size_{n}"])["Cross"]
         cases.append((n, f, f))
 
     for n, pattern, filt in cases:
